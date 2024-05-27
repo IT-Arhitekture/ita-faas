@@ -1,0 +1,73 @@
+service: ita-faas
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    EVENTS_TABLE: ${self:service}-events
+    UPLOAD_BUCKET: ${self:service}-uploads
+
+plugins:
+  - serverless-offline
+  - serverless-localstack
+
+custom:
+  localstack:
+    stages:
+      - local
+
+functions:
+  createEntry:
+    handler: handler.createEntry
+    events:
+      - http:
+          path: /entries
+          method: post
+          cors: true
+
+  getEntries:
+    handler: handler.getEntries
+    events:
+      - http:
+          path: /entries
+          method: get
+          cors: true
+
+  getEntry:
+    handler: handler.getEntry
+    events:
+      - http:
+          path: /entries/{id}
+          method: get
+          cors: true
+
+  deleteEntry:
+    handler: handler.deleteEntry
+    events:
+      - http:
+          path: /entries/{id}
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    EventsDynanoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.EVENTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+  UploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${self:provider.environment.UPLOAD_BUCKET}
